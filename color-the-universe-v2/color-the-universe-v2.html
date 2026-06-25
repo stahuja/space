@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Color the Universe — JWST Image Studio v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;
+      --space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;
+      --space-12:3rem;--space-16:4rem;--space-20:5rem;
+      --radius-sm:.375rem;--radius-md:.75rem;--radius-lg:1rem;--radius-xl:1.5rem;--radius-full:9999px;
+      --transition:180ms cubic-bezier(0.16,1,0.3,1);
+      --font-body:'Space Grotesk',Inter,sans-serif;
+      --font-display:'Newsreader',Georgia,serif;
+      --content:1180px;
+    }
+    [data-theme="dark"] {
+      --bg:#0e0d0b;
+      --surface:#171614;
+      --surface-2:#1f1e1b;
+      --surface-3:#272522;
+      --border:rgba(255,255,255,0.08);
+      --border-strong:rgba(255,255,255,0.16);
+      --text:#e8e5de;
+      --text-muted:#9e9891;
+      --text-faint:#625e58;
+      --primary:#5ecfdd;
+      --primary-dim:rgba(94,207,221,0.14);
+      --primary-hover:#7ddce8;
+      --gold:#f0c060;
+      --purple:#c0a8ff;
+      --green:#7ed8a4;
+      --shadow-sm:0 2px 8px rgba(0,0,0,.32);
+      --shadow-md:0 8px 32px rgba(0,0,0,.42);
+      --shadow-lg:0 24px 80px rgba(0,0,0,.55);
+    }
+    [data-theme="light"] {
+      --bg:#f4f2ed;
+      --surface:#faf9f6;
+      --surface-2:#ffffff;
+      --surface-3:#ece9e2;
+      --border:rgba(40,35,25,0.1);
+      --border-strong:rgba(40,35,25,0.22);
+      --text:#1c1a14;
+      --text-muted:#6b6659;
+      --text-faint:#b0ab9f;
+      --primary:#0a6d7b;
+      --primary-dim:rgba(10,109,123,0.1);
+      --primary-hover:#085462;
+      --gold:#c47a00;
+      --purple:#6f48c0;
+      --green:#2a8754;
+      --shadow-sm:0 1px 4px rgba(30,22,10,.07);
+      --shadow-md:0 6px 24px rgba(30,22,10,.09);
+      --shadow-lg:0 20px 60px rgba(30,22,10,.13);
+    }
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;scroll-padding-top:80px;}
+    body{min-height:100vh;font-family:var(--font-body);font-size:var(--text-base);line-height:1.62;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
+    img,canvas,svg{display:block;max-width:100%;}
+    button,input,select{font:inherit;color:inherit;cursor:pointer;}
+    h1,h2,h3,h4{line-height:1.06;text-wrap:balance;}
+    p{text-wrap:pretty;max-width:68ch;}
+
+    .skip{position:absolute;left:1rem;top:-3rem;background:var(--surface-2);padding:.5rem 1rem;border-radius:var(--radius-md);z-index:200;}
+    .skip:focus{top:1rem;}
+
+    /* ═══ NAV ═══ */
+    header{
+      position:sticky;top:0;z-index:100;
+      background:color-mix(in srgb,var(--bg) 76%,transparent);
+      border-bottom:1px solid var(--border);
+      backdrop-filter:blur(18px);
+    }
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4) var(--space-6);max-width:var(--content);margin:0 auto;}
+    .logo{display:flex;align-items:center;gap:var(--space-3);font-weight:700;font-size:var(--text-sm);}
+    .logo-mark{width:2rem;height:2rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold),var(--primary));box-shadow:0 0 0 4px var(--primary-dim);flex:0 0 auto;}
+    .nav-links{display:flex;gap:var(--space-5);align-items:center;}
+    .nav-links a{font-size:var(--text-sm);color:var(--text-muted);transition:color var(--transition);}
+    .nav-links a:hover{color:var(--text);}
+    .theme-btn{width:44px;height:44px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--surface-2);display:grid;place-items:center;font-size:1rem;transition:all var(--transition);}
+    .theme-btn:hover{border-color:var(--primary);transform:translateY(-1px);}
+
+    /* ═══ LAYOUT ═══ */
+    .shell{max-width:var(--content);margin:0 auto;padding:0 var(--space-6);}
+    section{padding:clamp(var(--space-10),6vw,var(--space-20)) 0;}
+    .sec-head{margin-bottom:var(--space-8);}
+    .sec-head h2{font-family:var(--font-display);font-size:var(--text-2xl);letter-spacing:-0.03em;margin-bottom:var(--space-3);}
+    .sec-head p{color:var(--text-muted);}
+    .tag{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.14em;color:var(--primary);padding:var(--space-2) var(--space-3);border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border));border-radius:var(--radius-full);background:var(--primary-dim);margin-bottom:var(--space-5);}
+
+    /* ═══ HERO ═══ */
+    .hero{min-height:calc(100vh - 75px);display:grid;grid-template-columns:1.1fr .9fr;gap:var(--space-10);align-items:center;padding-top:var(--space-12);padding-bottom:var(--space-12);}
+    .hero h1{font-family:var(--font-display);font-size:clamp(3rem,.5rem + 6.5vw,7rem);letter-spacing:-0.045em;margin-bottom:var(--space-5);}
+    .hero-sub{color:var(--text-muted);margin-bottom:var(--space-8);max-width:52ch;}
+    .hero-cta{display:flex;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-8);}
+    .btn{min-height:48px;padding:0 var(--space-6);border-radius:var(--radius-full);border:1px solid transparent;display:inline-flex;align-items:center;gap:var(--space-2);font-weight:600;font-size:var(--text-sm);transition:all var(--transition);}
+    .btn-primary{background:var(--primary);color:#08191c;box-shadow:var(--shadow-md);}
+    .btn-primary:hover{transform:translateY(-2px);background:var(--primary-hover);}
+    .btn-ghost{background:var(--surface-2);color:var(--text);border-color:var(--border);}
+    .btn-ghost:hover{border-color:var(--primary);}
+    .hero-pills{display:flex;gap:var(--space-3);flex-wrap:wrap;}
+    .pill{padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);background:var(--surface-2);border:1px solid var(--border);font-size:var(--text-xs);}
+    .pill span{color:var(--primary);font-weight:600;}
+
+    /* ═══ HERO CANVAS CARD ═══ */
+    .hero-card{background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:var(--space-5);box-shadow:var(--shadow-lg);overflow:hidden;position:relative;}
+    .hero-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(94,207,221,.08),transparent 40%),radial-gradient(circle at 80% 80%,rgba(192,168,255,.07),transparent 40%);pointer-events:none;}
+    .hero-canvas-wrap{border-radius:20px;overflow:hidden;background:#050810;border:1px solid rgba(255,255,255,.06);aspect-ratio:16/10;position:relative;}
+    #heroCanvas{width:100%;height:100%;}
+    .hero-legend{display:flex;gap:var(--space-3);justify-content:center;margin-top:var(--space-4);flex-wrap:wrap;}
+    .legend-dot{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);}
+    .dot{width:10px;height:10px;border-radius:50%;}
+
+    /* ═══ STUDIO ═══ */
+    .studio-layout{display:grid;grid-template-columns:1.4fr .6fr;gap:var(--space-8);}
+    .studio-left{display:flex;flex-direction:column;gap:var(--space-5);}
+    .canvas-shell{background:#030508;border-radius:20px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-md);position:relative;aspect-ratio:16/10;}
+    #mainCanvas{width:100%;height:100%;}
+    .canvas-loading{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      background:rgba(3,5,8,.9);color:var(--text-muted);font-size:var(--text-sm);
+      flex-direction:column;gap:var(--space-3);
+    }
+    .spinner{width:28px;height:28px;border:2px solid var(--border-strong);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* Target picker */
+    .target-row{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);}
+    .target-btn{
+      padding:var(--space-3) var(--space-2);border-radius:var(--radius-lg);border:1.5px solid var(--border);
+      background:var(--surface-2);text-align:center;transition:all var(--transition);
+      font-size:var(--text-xs);font-weight:600;color:var(--text-muted);
+    }
+    .target-btn:hover{border-color:var(--primary);color:var(--text);}
+    .target-btn.active{border-color:var(--primary);background:var(--primary-dim);color:var(--primary);}
+    .target-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:var(--space-2);background:var(--surface-3);}
+
+    /* Controls sidebar */
+    .controls-panel{display:flex;flex-direction:column;gap:var(--space-5);}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);box-shadow:var(--shadow-sm);}
+    .panel-title{font-size:var(--text-sm);font-weight:700;margin-bottom:var(--space-4);}
+
+    /* Channel sliders */
+    .channel-group{display:flex;flex-direction:column;gap:var(--space-4);}
+    .channel{padding:var(--space-4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-lg);}
+    .ch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3);}
+    .ch-label{font-size:var(--text-sm);font-weight:600;display:flex;align-items:center;gap:var(--space-2);}
+    .ch-band{font-size:var(--text-xs);color:var(--text-muted);font-weight:400;}
+    .ch-val{font-size:var(--text-xs);color:var(--primary);font-weight:700;min-width:3ch;text-align:right;}
+    input[type="range"]{width:100%;height:5px;border-radius:var(--radius-full);appearance:none;outline:none;cursor:pointer;}
+    input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--surface-2);border:2px solid var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.3);}
+    input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--surface-2);border:2px solid var(--primary);}
+    #redSlider{accent-color:#ff7060;background:linear-gradient(to right,#ff706040,#ff7060 var(--p,82%),var(--border) var(--p,82%));}
+    #greenSlider{accent-color:#7ed8a4;background:linear-gradient(to right,#7ed8a440,#7ed8a4 var(--p,68%),var(--border) var(--p,68%));}
+    #blueSlider{accent-color:#5ecfdd;background:linear-gradient(to right,#5ecfdd40,#5ecfdd var(--p,54%),var(--border) var(--p,54%));}
+
+    /* Curves / gamma */
+    .curve-group{display:flex;flex-direction:column;gap:var(--space-3);}
+    .curve-row{display:flex;justify-content:space-between;align-items:center;padding:var(--space-3) var(--space-4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);}
+    .curve-row label{font-size:var(--text-sm);}
+    .curve-row input{width:44px;text-align:center;background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:var(--space-1) var(--space-2);font-size:var(--text-xs);}
+
+    /* Presets */
+    .presets-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);}
+    .preset-btn{text-align:left;padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface-2);color:var(--text);transition:all var(--transition);}
+    .preset-btn:hover{border-color:var(--primary);}
+    .preset-btn.active{border-color:var(--primary);background:var(--primary-dim);}
+    .preset-btn strong{display:block;font-size:var(--text-xs);margin-bottom:var(--space-1);}
+    .preset-btn span{font-size:var(--text-xs);color:var(--text-muted);}
+
+    /* Action row */
+    .action-row{display:flex;gap:var(--space-3);flex-wrap:wrap;}
+    .btn-small{min-height:38px;padding:0 var(--space-4);font-size:var(--text-xs);}
+
+    /* Spectrum display */
+    #spectrumCanvas{width:100%;border-radius:var(--radius-md);background:var(--surface-3);display:block;}
+
+    /* ═══ COMPARE ═══ */
+    .compare-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);}
+    .compare-card{border-radius:var(--radius-xl);overflow:hidden;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm);}
+    .compare-canvas-wrap{aspect-ratio:16/10;background:#030508;position:relative;}
+    .compare-canvas-wrap canvas{width:100%;height:100%;}
+    .compare-info{padding:var(--space-4) var(--space-5);}
+    .compare-info strong{display:block;margin-bottom:var(--space-2);}
+    .compare-info p{font-size:var(--text-sm);color:var(--text-muted);}
+
+    /* ═══ HOW IT WORKS ═══ */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6);}
+    .step{padding:var(--space-6);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);}
+    .step-num{display:inline-grid;place-items:center;width:2.5rem;height:2.5rem;border-radius:50%;background:var(--primary-dim);color:var(--primary);font-weight:700;margin-bottom:var(--space-5);}
+    .step h3{margin-bottom:var(--space-3);}
+    .step p{font-size:var(--text-sm);color:var(--text-muted);}
+    .band-chips{display:flex;gap:var(--space-2);margin-top:var(--space-4);flex-wrap:wrap;}
+    .band-chip{padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;}
+
+    /* ═══ DATA NOTE ═══ */
+    .data-note{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-6) var(--space-8);display:grid;grid-template-columns:auto 1fr;gap:var(--space-6);align-items:start;}
+    .data-note .icon{width:3rem;height:3rem;border-radius:var(--radius-lg);background:var(--primary-dim);color:var(--primary);display:grid;place-items:center;font-size:1.4rem;flex:0 0 auto;}
+    .data-note h3{margin-bottom:var(--space-3);}
+    .data-note p{font-size:var(--text-sm);color:var(--text-muted);}
+    .data-note a{color:var(--primary);}
+
+    /* ═══ FOOTER ═══ */
+    footer{padding:var(--space-8) 0 var(--space-12);border-top:1px solid var(--border);}
+    .footer-inner{display:flex;justify-content:space-between;gap:var(--space-6);flex-wrap:wrap;align-items:center;}
+    .footer-inner p{font-size:var(--text-sm);color:var(--text-muted);}
+    .footer-inner a{color:var(--primary);}
+
+    /* ═══ ANIMATION ═══ */
+    .fade{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease;}
+    .fade.in{opacity:1;transform:translateY(0);}
+
+    /* ═══ RESPONSIVE ═══ */
+    @media(max-width:1000px){
+      .hero,.studio-layout{grid-template-columns:1fr;}
+      .hero{min-height:auto;padding-top:var(--space-8);}
+      .compare-grid,.steps{grid-template-columns:1fr 1fr;}
+    }
+    @media(max-width:640px){
+      .shell{padding:0 var(--space-4);}
+      .nav{padding:var(--space-4);}
+      .nav-links{display:none;}
+      .target-row{grid-template-columns:repeat(2,1fr);}
+      .compare-grid,.steps{grid-template-columns:1fr;}
+      .hero h1{font-size:clamp(2.6rem,.5rem+7vw,5rem);}
+      .data-note{grid-template-columns:1fr;}
+    }
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation:none!important;transition:none!important;}
+      .fade{opacity:1;transform:none;}
+    }
+  </style>
+</head>
+<body>
+<a href="#main" class="skip">Skip to content</a>
+
+<header>
+  <nav class="nav" aria-label="Site navigation">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true"></span>
+      Color the Universe
+    </div>
+    <div class="nav-links">
+      <a href="#studio">Studio</a>
+      <a href="#compare">Compare</a>
+      <a href="#how">How it works</a>
+    </div>
+    <button class="theme-btn" id="themeToggle" aria-label="Toggle dark/light mode">🌙</button>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="shell hero">
+    <div class="fade">
+      <div class="tag">Real JWST data · Version 2</div>
+      <h1>See the universe the way scientists do.</h1>
+      <p class="hero-sub">These images are built from real single-band infrared layers captured by the James Webb Space Telescope. Drag the sliders to mix wavelengths, reveal hidden dust, and explore what different filters uncover.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#studio">Open the studio</a>
+        <a class="btn btn-ghost" href="#how">How JWST imaging works</a>
+      </div>
+      <div class="hero-pills">
+        <div class="pill">Target: <span>Pillars of Creation</span></div>
+        <div class="pill">Filters: <span>F090W · F200W · F444W</span></div>
+        <div class="pill">Source: <span>NASA MAST Archive</span></div>
+      </div>
+    </div>
+    <div class="hero-card fade">
+      <div class="hero-canvas-wrap">
+        <canvas id="heroCanvas" width="960" height="600" aria-label="Live-composited JWST infrared image preview"></canvas>
+      </div>
+      <div class="hero-legend" aria-label="Filter key">
+        <span class="legend-dot"><span class="dot" style="background:#ff7060;"></span>F444W Long-IR (dust &amp; gas)</span>
+        <span class="legend-dot"><span class="dot" style="background:#7ed8a4;"></span>F200W Mid-IR (nebulosity)</span>
+        <span class="legend-dot"><span class="dot" style="background:#5ecfdd;"></span>F090W Short-IR (stars)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ STUDIO ═══════════ -->
+  <section class="shell" id="studio">
+    <div class="sec-head fade">
+      <h2>Image studio</h2>
+      <p>Each channel loads a real single-band layer from a JWST target. Combine them to create your own color interpretation of deep space.</p>
+    </div>
+
+    <!-- Target selector -->
+    <div class="target-row fade" id="targetRow" role="radiogroup" aria-label="Choose observation target">
+      <button class="target-btn active" data-target="pillars" role="radio" aria-checked="true">
+        <img class="target-thumb" src="assets/pillars_f444w.jpg" alt="Pillars of Creation preview" loading="lazy" />
+        Pillars of Creation
+      </button>
+      <button class="target-btn" data-target="carina" role="radio" aria-checked="false">
+        <img class="target-thumb" src="assets/carina_f444w.jpg" alt="Carina Nebula preview" loading="lazy" />
+        Carina Nebula
+      </button>
+      <button class="target-btn" data-target="stephan" role="radio" aria-checked="false">
+        <img class="target-thumb" src="assets/stephan_f444w.jpg" alt="Stephan's Quintet preview" loading="lazy" />
+        Stephan's Quintet
+      </button>
+      <button class="target-btn" data-target="southern_ring" role="radio" aria-checked="false">
+        <img class="target-thumb" src="assets/southern_ring_f444w.jpg" alt="Southern Ring Nebula preview" loading="lazy" />
+        Southern Ring
+      </button>
+    </div>
+
+    <br>
+
+    <div class="studio-layout fade">
+      <!-- Canvas -->
+      <div class="studio-left">
+        <div class="canvas-shell">
+          <canvas id="mainCanvas" width="1280" height="800" aria-label="Composited JWST image canvas"></canvas>
+          <div class="canvas-loading" id="loadingOverlay">
+            <div class="spinner" aria-hidden="true"></div>
+            <span>Loading JWST image layers…</span>
+          </div>
+        </div>
+
+        <!-- Action row -->
+        <div class="action-row">
+          <button class="btn btn-ghost btn-small" id="randomBtn">✦ Surprise me</button>
+          <button class="btn btn-ghost btn-small" id="resetBtn">↺ Reset</button>
+          <button class="btn btn-primary btn-small" id="downloadBtn">⬇ Save image</button>
+        </div>
+
+        <!-- Spectrum visualiser -->
+        <div class="panel" aria-label="Spectral contribution chart">
+          <div class="panel-title">Spectral contribution</div>
+          <canvas id="spectrumCanvas" height="64" aria-label="Bar chart showing relative contribution of each infrared band"></canvas>
+        </div>
+      </div>
+
+      <!-- Controls sidebar -->
+      <div class="controls-panel">
+        <!-- Channel sliders -->
+        <div class="panel">
+          <div class="panel-title">Filter channels</div>
+          <div class="channel-group">
+            <div class="channel">
+              <div class="ch-header">
+                <span class="ch-label" style="color:#ff9080;">● Red <span class="ch-band">F444W ~4.4 μm</span></span>
+                <span class="ch-val" id="redVal">82%</span>
+              </div>
+              <input id="redSlider" type="range" min="0" max="100" value="82" style="--p:82%" aria-label="Red channel F444W intensity" />
+            </div>
+            <div class="channel">
+              <div class="ch-header">
+                <span class="ch-label" style="color:#7ed8a4;">● Green <span class="ch-band">F200W ~2.0 μm</span></span>
+                <span class="ch-val" id="greenVal">68%</span>
+              </div>
+              <input id="greenSlider" type="range" min="0" max="100" value="68" style="--p:68%" aria-label="Green channel F200W intensity" />
+            </div>
+            <div class="channel">
+              <div class="ch-header">
+                <span class="ch-label" style="color:#5ecfdd;">● Blue <span class="ch-band">F090W ~0.9 μm</span></span>
+                <span class="ch-val" id="blueVal">54%</span>
+              </div>
+              <input id="blueSlider" type="range" min="0" max="100" value="54" style="--p:54%" aria-label="Blue channel F090W intensity" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tone controls -->
+        <div class="panel">
+          <div class="panel-title">Tone controls</div>
+          <div class="curve-group">
+            <div class="curve-row">
+              <label for="gammaInput">Gamma</label>
+              <input id="gammaInput" type="number" min="0.3" max="3.0" step="0.05" value="1.00" />
+            </div>
+            <div class="curve-row">
+              <label for="brightnessInput">Brightness</label>
+              <input id="brightnessInput" type="number" min="-100" max="100" step="5" value="0" />
+            </div>
+            <div class="curve-row">
+              <label for="contrastInput">Contrast</label>
+              <input id="contrastInput" type="number" min="-100" max="100" step="5" value="0" />
+            </div>
+            <div class="curve-row">
+              <label for="saturateInput">Saturation</label>
+              <input id="saturateInput" type="number" min="0" max="300" step="10" value="100" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="panel">
+          <div class="panel-title">Presets</div>
+          <div class="presets-grid">
+            <button class="preset-btn active" data-preset="webb">
+              <strong>Webb Glow</strong>
+              <span>Balanced science look</span>
+            </button>
+            <button class="preset-btn" data-preset="dust">
+              <strong>Dust Hunter</strong>
+              <span>Reveal warm clouds</span>
+            </button>
+            <button class="preset-btn" data-preset="starlight">
+              <strong>Starlight Pop</strong>
+              <span>Emphasize hot stars</span>
+            </button>
+            <button class="preset-btn" data-preset="dream">
+              <strong>Cosmic Dream</strong>
+              <span>Artistic purple haze</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Science tip -->
+        <div class="panel" id="sciTipPanel" aria-live="polite">
+          <div class="panel-title">💡 Science tip</div>
+          <p style="font-size:var(--text-sm);color:var(--text-muted);" id="sciTip">The F444W long-infrared band shows warm dust clouds — structures that are completely invisible to human eyes and even to Hubble's optical instruments.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ COMPARE ═══════════ -->
+  <section class="shell" id="compare">
+    <div class="sec-head fade">
+      <h2>Same data, different stories</h2>
+      <p>Compare how choosing different wavelength-to-color mappings changes what science becomes visible in the same image.</p>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card fade">
+        <div class="compare-canvas-wrap">
+          <canvas class="compare-canvas" data-preset="webb" width="640" height="400"></canvas>
+        </div>
+        <div class="compare-info">
+          <strong>Webb Glow — Science preset</strong>
+          <p>Balanced red-green-blue assignment close to how STScI image processors combine JWST bands for public outreach.</p>
+        </div>
+      </div>
+      <div class="compare-card fade">
+        <div class="compare-canvas-wrap">
+          <canvas class="compare-canvas" data-preset="dust" width="640" height="400"></canvas>
+        </div>
+        <div class="compare-info">
+          <strong>Dust Hunter — IR emphasis</strong>
+          <p>Boosts the longest wavelengths to expose cooler dust structures hidden behind bright star-forming regions.</p>
+        </div>
+      </div>
+      <div class="compare-card fade">
+        <div class="compare-canvas-wrap">
+          <canvas class="compare-canvas" data-preset="starlight" width="640" height="400"></canvas>
+        </div>
+        <div class="compare-info">
+          <strong>Starlight Pop — Short-IR boost</strong>
+          <p>Emphasizes the F090W band, making newly formed, hot stars glow brilliantly against the darker nebula background.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ HOW IT WORKS ═══════════ -->
+  <section class="shell" id="how">
+    <div class="sec-head fade">
+      <h2>How JWST images are built</h2>
+      <p>Every iconic JWST photo starts as separate monochrome layers. Here is how light becomes art.</p>
+    </div>
+    <div class="steps">
+      <article class="step fade">
+        <div class="step-num">1</div>
+        <h3>Capture infrared light</h3>
+        <p>JWST's NIRCam instrument records brightness at specific infrared wavelengths. Each filter is like a color window: it only lets one slice of light through at a time. The detector captures a single grayscale image per filter pass.</p>
+        <div class="band-chips">
+          <span class="band-chip" style="background:rgba(255,112,96,.15);color:#ff9080;">F090W 0.9μm</span>
+          <span class="band-chip" style="background:rgba(126,216,164,.15);color:#7ed8a4;">F200W 2.0μm</span>
+          <span class="band-chip" style="background:rgba(94,207,221,.15);color:#5ecfdd;">F444W 4.4μm</span>
+        </div>
+      </article>
+      <article class="step fade">
+        <div class="step-num">2</div>
+        <h3>Assign visible colors</h3>
+        <p>Since human eyes cannot see infrared, scientists assign each wavelength band a visible color — typically shorter wavelengths get blue, middle ones get green, and longer (warmer) ones get red. This is called false-color imaging and it makes invisible structures visible.</p>
+        <div class="band-chips" style="margin-top:var(--space-4);">
+          <span class="band-chip" style="background:rgba(94,207,221,.15);color:#5ecfdd;">Short → Blue</span>
+          <span class="band-chip" style="background:rgba(126,216,164,.15);color:#7ed8a4;">Mid → Green</span>
+          <span class="band-chip" style="background:rgba(255,112,96,.15);color:#ff9080;">Long → Red</span>
+        </div>
+      </article>
+      <article class="step fade">
+        <div class="step-num">3</div>
+        <h3>Composite and calibrate</h3>
+        <p>Image processors at STScI align, stack, and adjust each layer's brightness to create a final RGB composite. Choices about which colors to assign, and how bright to set each band, are artistic and scientific decisions — which is exactly what you are making in this studio.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══════════ DATA NOTE ═══════════ -->
+  <section class="shell">
+    <div class="data-note fade">
+      <div class="icon" aria-hidden="true">🔭</div>
+      <div>
+        <h3>About the image data</h3>
+        <p>The band layers used in this studio were derived from real JWST Early Release Observation images sourced from the <a href="https://mast.stsci.edu" target="_blank" rel="noopener">MAST Archive</a> via NASA's public image library. The images are processed into simulated single-band grayscale layers (F090W short-IR, F200W mid-IR, F444W long-IR) to demonstrate authentic infrared compositing. All JWST data is in the public domain (NASA/ESA/CSA). The next version of this studio will integrate live FITS file parsing via <code>astropy</code> for true per-pixel band data.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="shell footer-inner">
+    <p>Images derived from <a href="https://mast.stsci.edu" target="_blank" rel="noopener">NASA MAST Archive</a> — JWST Early Release Observations. Public domain.</p>
+    <p>Built for the <a href="https://stardance.hackclub.com" target="_blank" rel="noopener">Hack Club Stardance Challenge</a></p>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA & CONFIGURATION
+// ═══════════════════════════════════════════════════
+const TARGETS = {
+  pillars: {
+    label: 'Pillars of Creation',
+    f090w: 'assets/pillars_f090w.jpg',
+    f200w: 'assets/pillars_f200w.jpg',
+    f444w: 'assets/pillars_f444w.jpg',
+    tip: 'The Pillars of Creation are columns of gas and dust 4–5 light-years tall in the Eagle Nebula. JWST\'s infrared vision cuts through dust Hubble couldn\'t see, revealing hundreds of new stars being born.'
+  },
+  carina: {
+    label: 'Carina Nebula',
+    f090w: 'assets/carina_f090w.jpg',
+    f200w: 'assets/carina_f200w.jpg',
+    f444w: 'assets/carina_f444w.jpg',
+    tip: 'The Carina Nebula is one of the largest stellar nurseries, 7,600 light-years away. The tall "mountains" are actually towers of gas where new stars are being born. Long-IR filters expose the dusty walls in detail.'
+  },
+  stephan: {
+    label: "Stephan's Quintet",
+    f090w: 'assets/stephan_f090w.jpg',
+    f200w: 'assets/stephan_f200w.jpg',
+    f444w: 'assets/stephan_f444w.jpg',
+    tip: "Stephan's Quintet is a group of 5 galaxies caught in a gravitational dance. Four are around 290 million light-years away. JWST can trace tidal debris and shock waves from their slow-motion collision."
+  },
+  southern_ring: {
+    label: 'Southern Ring Nebula',
+    f090w: 'assets/southern_ring_f090w.jpg',
+    f200w: 'assets/southern_ring_f200w.jpg',
+    f444w: 'assets/southern_ring_f444w.jpg',
+    tip: 'The Southern Ring Nebula shows a dying star (a white dwarf) expelling its outer layers. JWST revealed a second star lurking at the center — a discovery hidden from every telescope before it.'
+  }
+};
+
+const PRESETS = {
+  webb:     { r:82, g:68, b:54, gamma:1.0,  brightness:0,   contrast:0,   saturation:120 },
+  dust:     { r:96, g:55, b:22, gamma:0.92, brightness:5,   contrast:10,  saturation:130 },
+  starlight:{ r:42, g:74, b:92, gamma:1.15, brightness:0,   contrast:12,  saturation:110 },
+  dream:    { r:78, g:42, b:90, gamma:1.05, brightness:5,   contrast:8,   saturation:150 }
+};
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let currentTarget = 'pillars';
+let currentPreset = 'webb';
+let layers = { f090w: null, f200w: null, f444w: null };
+let layersLoaded = false;
+const imageCache = {};
+
+// ═══════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════
+const mainCanvas     = document.getElementById('mainCanvas');
+const heroCanvas     = document.getElementById('heroCanvas');
+const spectrumCanvas = document.getElementById('spectrumCanvas');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const redSlider      = document.getElementById('redSlider');
+const greenSlider    = document.getElementById('greenSlider');
+const blueSlider     = document.getElementById('blueSlider');
+const redVal         = document.getElementById('redVal');
+const greenVal       = document.getElementById('greenVal');
+const blueVal        = document.getElementById('blueVal');
+const gammaInput     = document.getElementById('gammaInput');
+const brightnessInput= document.getElementById('brightnessInput');
+const contrastInput  = document.getElementById('contrastInput');
+const saturateInput  = document.getElementById('saturateInput');
+const sciTip         = document.getElementById('sciTip');
+const compareCanvases= [...document.querySelectorAll('.compare-canvas')];
+
+// ═══════════════════════════════════════════════════
+//  IMAGE LOADING
+// ═══════════════════════════════════════════════════
+function loadImage(url) {
+  if (imageCache[url]) return Promise.resolve(imageCache[url]);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => { imageCache[url] = img; resolve(img); };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+async function loadTarget(target) {
+  layersLoaded = false;
+  loadingOverlay.style.display = 'flex';
+  const t = TARGETS[target];
+  try {
+    const [f444w, f200w, f090w] = await Promise.all([
+      loadImage(t.f444w), loadImage(t.f200w), loadImage(t.f090w)
+    ]);
+    layers = { f444w, f200w, f090w };
+    layersLoaded = true;
+    sciTip.textContent = t.tip;
+    loadingOverlay.style.display = 'none';
+    renderComposite(mainCanvas);
+    renderComposite(heroCanvas);
+    renderComparisons();
+    drawSpectrum();
+  } catch (e) {
+    loadingOverlay.innerHTML = '<span style="color:var(--text-muted)">Could not load image layers. Please check assets folder.</span>';
+    console.error('Layer load error:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  COMPOSITING ENGINE
+// ═══════════════════════════════════════════════════
+function getValues() {
+  return {
+    r: Number(redSlider.value) / 100,
+    g: Number(greenSlider.value) / 100,
+    b: Number(blueSlider.value) / 100,
+    gamma: parseFloat(gammaInput.value) || 1.0,
+    brightness: parseFloat(brightnessInput.value) / 100,
+    contrast: parseFloat(contrastInput.value) / 100,
+    saturation: parseFloat(saturateInput.value) / 100
+  };
+}
+
+function drawLayerToCanvas(offscreen, img) {
+  const ctx = offscreen.getContext('2d');
+  ctx.clearRect(0, 0, offscreen.width, offscreen.height);
+  ctx.drawImage(img, 0, 0, offscreen.width, offscreen.height);
+  return ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+}
+
+function applyTone(pixel, gamma, brightness, contrast, saturation) {
+  let [r, g, b] = pixel;
+  // Normalize
+  r /= 255; g /= 255; b /= 255;
+  // Gamma
+  r = Math.pow(Math.max(0, r), gamma);
+  g = Math.pow(Math.max(0, g), gamma);
+  b = Math.pow(Math.max(0, b), gamma);
+  // Brightness
+  r += brightness; g += brightness; b += brightness;
+  // Contrast
+  const cf = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
+  r = cf * (r - 0.5) + 0.5;
+  g = cf * (g - 0.5) + 0.5;
+  b = cf * (b - 0.5) + 0.5;
+  // Saturation (luma-based)
+  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  r = luma + saturation * (r - luma);
+  g = luma + saturation * (g - luma);
+  b = luma + saturation * (b - luma);
+  // Clamp & return 0-255
+  return [
+    Math.min(255, Math.max(0, r * 255)),
+    Math.min(255, Math.max(0, g * 255)),
+    Math.min(255, Math.max(0, b * 255))
+  ];
+}
+
+function renderComposite(canvas, overrideVals) {
+  if (!layersLoaded) return;
+  const vals = overrideVals || getValues();
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+
+  // Draw each layer into offscreen canvases to extract pixel data
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+
+  const dataR = drawLayerToCanvas(off, layers.f444w).data;
+  const dataG = drawLayerToCanvas(off, layers.f200w).data;
+  const dataB = drawLayerToCanvas(off, layers.f090w).data;
+
+  const output = ctx.createImageData(W, H);
+  const out = output.data;
+
+  for (let i = 0; i < W * H; i++) {
+    const idx = i * 4;
+    // Each layer is grayscale — use average of its RGB channels
+    const lumR = (dataR[idx] + dataR[idx+1] + dataR[idx+2]) / 3;
+    const lumG = (dataG[idx] + dataG[idx+1] + dataG[idx+2]) / 3;
+    const lumB = (dataB[idx] + dataB[idx+1] + dataB[idx+2]) / 3;
+
+    let r = lumR * vals.r;
+    let g = lumG * vals.g;
+    let b = lumB * vals.b;
+
+    // Tone adjustments
+    const toned = applyTone([r, g, b], vals.gamma, vals.brightness, vals.contrast, vals.saturation);
+    out[idx]   = toned[0];
+    out[idx+1] = toned[1];
+    out[idx+2] = toned[2];
+    out[idx+3] = 255;
+  }
+
+  ctx.putImageData(output, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════
+//  SPECTRUM VISUALIZER
+// ═══════════════════════════════════════════════════
+function drawSpectrum() {
+  const ctx = spectrumCanvas.getContext('2d');
+  const W = spectrumCanvas.width || spectrumCanvas.offsetWidth || 300;
+  const H = 64;
+  spectrumCanvas.width = W;
+  ctx.clearRect(0, 0, W, H);
+
+  const vals = getValues();
+  const segments = [
+    { label: 'F090W 0.9μm', val: vals.b, color: '#5ecfdd' },
+    { label: 'F200W 2.0μm', val: vals.g, color: '#7ed8a4' },
+    { label: 'F444W 4.4μm', val: vals.r, color: '#ff9080' },
+  ];
+
+  const barH = 18;
+  const gap = (H - segments.length * barH) / (segments.length + 1);
+
+  segments.forEach((seg, i) => {
+    const y = gap + i * (barH + gap);
+    const barW = (W - 100) * seg.val;
+    // Track
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.beginPath(); ctx.roundRect(80, y, W - 90, barH, 4); ctx.fill();
+    // Fill
+    ctx.fillStyle = seg.color;
+    ctx.beginPath(); ctx.roundRect(80, y, Math.max(0, barW), barH, 4); ctx.fill();
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '11px "Space Grotesk", sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(seg.label, 0, y + barH / 2);
+    // Value
+    ctx.fillStyle = seg.color;
+    ctx.fillText(`${Math.round(seg.val * 100)}%`, W - 38, y + barH / 2);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  COMPARISON GALLERY
+// ═══════════════════════════════════════════════════
+function renderComparisons() {
+  compareCanvases.forEach(canvas => {
+    const presetName = canvas.dataset.preset;
+    const p = PRESETS[presetName];
+    const vals = {
+      r: p.r / 100, g: p.g / 100, b: p.b / 100,
+      gamma: p.gamma, brightness: p.brightness / 100,
+      contrast: p.contrast / 100, saturation: p.saturation / 100
+    };
+    renderComposite(canvas, vals);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  EVENT LISTENERS
+// ═══════════════════════════════════════════════════
+function applyPreset(name) {
+  currentPreset = name;
+  const p = PRESETS[name];
+  redSlider.value = p.r;
+  greenSlider.value = p.g;
+  blueSlider.value = p.b;
+  gammaInput.value = p.gamma.toFixed(2);
+  brightnessInput.value = p.brightness;
+  contrastInput.value = p.contrast;
+  saturateInput.value = p.saturation;
+  updateSliderUI();
+  document.querySelectorAll('.preset-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.preset === name));
+  redraw();
+}
+
+function updateSliderUI() {
+  redVal.textContent = `${redSlider.value}%`;
+  greenVal.textContent = `${greenSlider.value}%`;
+  blueVal.textContent = `${blueSlider.value}%`;
+  redSlider.style.setProperty('--p', `${redSlider.value}%`);
+  greenSlider.style.setProperty('--p', `${greenSlider.value}%`);
+  blueSlider.style.setProperty('--p', `${blueSlider.value}%`);
+}
+
+function redraw() {
+  updateSliderUI();
+  renderComposite(mainCanvas);
+  renderComposite(heroCanvas);
+  drawSpectrum();
+}
+
+[redSlider, greenSlider, blueSlider].forEach(s => s.addEventListener('input', () => { redraw(); }));
+[gammaInput, brightnessInput, contrastInput, saturateInput].forEach(i => i.addEventListener('input', () => redraw()));
+
+document.querySelectorAll('.preset-btn').forEach(btn =>
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset)));
+
+document.querySelectorAll('[data-target]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-target]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked','false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-checked', 'true');
+    currentTarget = btn.dataset.target;
+    loadTarget(currentTarget);
+  });
+});
+
+document.getElementById('randomBtn').addEventListener('click', () => {
+  redSlider.value   = Math.floor(Math.random() * 70) + 20;
+  greenSlider.value = Math.floor(Math.random() * 70) + 15;
+  blueSlider.value  = Math.floor(Math.random() * 70) + 10;
+  gammaInput.value  = (0.7 + Math.random() * 1.2).toFixed(2);
+  brightnessInput.value = Math.floor(Math.random() * 30) - 10;
+  contrastInput.value   = Math.floor(Math.random() * 30);
+  saturateInput.value   = Math.floor(Math.random() * 150) + 80;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  redraw();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => applyPreset('webb'));
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  mainCanvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `jwst_${currentTarget}_${currentPreset}.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/png');
+});
+
+// ═══════════════════════════════════════════════════
+//  THEME TOGGLE
+// ═══════════════════════════════════════════════════
+const themeBtn = document.getElementById('themeToggle');
+let theme = 'dark';
+document.documentElement.setAttribute('data-theme', theme);
+themeBtn.addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  themeBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+  themeBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+});
+
+// ═══════════════════════════════════════════════════
+//  SCROLL REVEAL
+// ═══════════════════════════════════════════════════
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade').forEach(el => io.observe(el));
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+loadTarget('pillars');
+</script>
+</body>
+</html>
