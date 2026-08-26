@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color the Universe</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #101114;
+      color: #f1f1f1;
+      font-family: Arial, sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 1100px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    h2 { margin-top: 0; font-size: 1.15rem; }
+    p { color: #b9b9b9; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 20px;
+      margin-top: 24px;
+    }
+    .image-box, .controls, .targets, .about {
+      background: #1a1c20;
+      border: 1px solid #34363c;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .image-box { padding: 0; overflow: hidden; background: #000; }
+    canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
+    .controls { display: grid; gap: 16px; align-content: start; }
+    label { display: grid; gap: 6px; font-size: 0.92rem; }
+    .channel { display: flex; justify-content: space-between; }
+    input[type="range"] { width: 100%; }
+    input[type="number"] {
+      width: 76px;
+      background: #25272d;
+      color: white;
+      border: 1px solid #454850;
+      border-radius: 5px;
+      padding: 5px;
+    }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .targets { margin-top: 20px; }
+    .target-list, .actions, .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+    button {
+      background: #2a2d34;
+      color: #f1f1f1;
+      border: 1px solid #454850;
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    button:hover, button.active { background: #0e6d7a; border-color: #5dcbd7; }
+    .about { margin-top: 20px; }
+    .about p { margin-bottom: 0; }
+    @media (max-width: 760px) {
+      body { padding: 14px; }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Color the Universe</h1>
+    <p>Mix three JWST-inspired infrared image layers to create your own false-color space image.</p>
+
+    <section class="targets">
+      <h2>Choose a target</h2>
+      <div class="target-list" id="targets"></div>
+    </section>
+
+    <div class="layout">
+      <section class="image-box">
+        <canvas id="canvas" width="1000" height="625" aria-label="Your composite JWST image"></canvas>
+      </section>
+
+      <section class="controls">
+        <div>
+          <h2>Filter controls</h2>
+          <p id="tip"></p>
+        </div>
+
+        <label>
+          <span class="channel"><span>Red — F444W (long infrared)</span><strong id="redOut">82%</strong></span>
+          <input id="red" type="range" min="0" max="100" value="82">
+        </label>
+        <label>
+          <span class="channel"><span>Green — F200W (mid infrared)</span><strong id="greenOut">68%</strong></span>
+          <input id="green" type="range" min="0" max="100" value="68">
+        </label>
+        <label>
+          <span class="channel"><span>Blue — F090W (short infrared)</span><strong id="blueOut">54%</strong></span>
+          <input id="blue" type="range" min="0" max="100" value="54">
+        </label>
+
+        <div class="row">
+          <label for="gamma">Gamma</label>
+          <input id="gamma" type="number" min="0.4" max="2.5" step="0.05" value="1">
+        </div>
+        <div class="row">
+          <label for="saturation">Saturation</label>
+          <input id="saturation" type="number" min="0" max="200" step="10" value="120">
+        </div>
+
+        <div>
+          <h2>Presets</h2>
+          <div class="presets">
+            <button data-preset="webb" class="active">Webb Glow</button>
+            <button data-preset="dust">Dust Hunter</button>
+            <button data-preset="stars">Starlight Pop</button>
+            <button data-preset="dream">Cosmic Dream</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="random">Surprise me</button>
+          <button id="reset">Reset</button>
+          <button id="save">Save PNG</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="about">
+      <h2>What you are seeing</h2>
+      <p>JWST records invisible infrared light through separate filters. This app maps long infrared light to red, mid infrared to green, and short infrared to blue. Adjusting the channels changes which structures stand out.</p>
+    </section>
+  </main>
+
+  <script>
+    const targets = {
+      pillars: {
+        name: 'Pillars of Creation',
+        files: ['pillars_f444w.jpg', 'pillars_f200w.jpg', 'pillars_f090w.jpg'],
+        tip: 'Long infrared highlights dust inside the Pillars of Creation, while short infrared makes young stars stand out.'
+      },
+      carina: {
+        name: 'Carina Nebula',
+        files: ['carina_f444w.jpg', 'carina_f200w.jpg', 'carina_f090w.jpg'],
+        tip: 'Carina is a stellar nursery. Change the filters to compare dusty clouds with the stars inside and around them.'
+      },
+      stephan: {
+        name: "Stephan's Quintet",
+        files: ['stephan_f444w.jpg', 'stephan_f200w.jpg', 'stephan_f090w.jpg'],
+        tip: 'These galaxies are interacting through gravity. Different infrared layers bring out different structures in the group.'
+      },
+      southern_ring: {
+        name: 'Southern Ring Nebula',
+        files: ['southern_ring_f444w.jpg', 'southern_ring_f200w.jpg', 'southern_ring_f090w.jpg'],
+        tip: 'The Southern Ring Nebula is material expelled by a dying star. The layers help reveal its shell-like structure.'
+      }
+    };
+
+    const presets = {
+      webb:  [82, 68, 54, 1.00, 120],
+      dust:  [96, 55, 22, 0.92, 130],
+      stars: [42, 74, 92, 1.15, 110],
+      dream: [78, 42, 90, 1.05, 150]
+    };
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const inputs = {
+      red: document.getElementById('red'),
+      green: document.getElementById('green'),
+      blue: document.getElementById('blue'),
+      gamma: document.getElementById('gamma'),
+      saturation: document.getElementById('saturation')
+    };
+    const output = {
+      red: document.getElementById('redOut'),
+      green: document.getElementById('greenOut'),
+      blue: document.getElementById('blueOut')
+    };
+
+    let current = 'pillars';
+    let images = [];
+    const cache = {};
+
+    function image(path) {
+      if (cache[path]) return Promise.resolve(cache[path]);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => { cache[path] = img; resolve(img); };
+        img.onerror = () => reject(new Error(`Could not load ${path}`));
+        img.src = path;
+      });
+    }
+
+    async function chooseTarget(key) {
+      current = key;
+      document.querySelectorAll('[data-target]').forEach(button => {
+        button.classList.toggle('active', button.dataset.target === key);
+      });
+      document.getElementById('tip').textContent = targets[key].tip;
+      images = await Promise.all(targets[key].files.map(image));
+      draw();
+    }
+
+    function drawLayer(img) {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = canvas.width;
+      offscreen.height = canvas.height;
+      const offCtx = offscreen.getContext('2d');
+      offCtx.drawImage(img, 0, 0, offscreen.width, offscreen.height);
+      return offCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+    }
+
+    function draw() {
+      if (images.length !== 3) return;
+      const redLayer = drawLayer(images[0]);
+      const greenLayer = drawLayer(images[1]);
+      const blueLayer = drawLayer(images[2]);
+      const red = Number(inputs.red.value) / 100;
+      const green = Number(inputs.green.value) / 100;
+      const blue = Number(inputs.blue.value) / 100;
+      const gamma = Number(inputs.gamma.value) || 1;
+      const saturation = Number(inputs.saturation.value) / 100;
+      const result = ctx.createImageData(canvas.width, canvas.height);
+
+      for (let i = 0; i < result.data.length; i += 4) {
+        let r = ((redLayer[i] + redLayer[i + 1] + redLayer[i + 2]) / 3 / 255) * red;
+        let g = ((greenLayer[i] + greenLayer[i + 1] + greenLayer[i + 2]) / 3 / 255) * green;
+        let b = ((blueLayer[i] + blueLayer[i + 1] + blueLayer[i + 2]) / 3 / 255) * blue;
+
+        r = Math.pow(Math.max(0, r), gamma);
+        g = Math.pow(Math.max(0, g), gamma);
+        b = Math.pow(Math.max(0, b), gamma);
+
+        const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        r = luma + saturation * (r - luma);
+        g = luma + saturation * (g - luma);
+        b = luma + saturation * (b - luma);
+
+        result.data[i] = Math.min(255, Math.max(0, r * 255));
+        result.data[i + 1] = Math.min(255, Math.max(0, g * 255));
+        result.data[i + 2] = Math.min(255, Math.max(0, b * 255));
+        result.data[i + 3] = 255;
+      }
+      ctx.putImageData(result, 0, 0);
+      output.red.textContent = `${inputs.red.value}%`;
+      output.green.textContent = `${inputs.green.value}%`;
+      output.blue.textContent = `${inputs.blue.value}%`;
+    }
+
+    function applyPreset(name) {
+      const [r, g, b, gamma, saturation] = presets[name];
+      inputs.red.value = r;
+      inputs.green.value = g;
+      inputs.blue.value = b;
+      inputs.gamma.value = gamma;
+      inputs.saturation.value = saturation;
+      document.querySelectorAll('[data-preset]').forEach(button => {
+        button.classList.toggle('active', button.dataset.preset === name);
+      });
+      draw();
+    }
+
+    for (const [key, target] of Object.entries(targets)) {
+      const button = document.createElement('button');
+      button.textContent = target.name;
+      button.dataset.target = key;
+      button.classList.toggle('active', key === current);
+      button.addEventListener('click', () => chooseTarget(key));
+      document.getElementById('targets').appendChild(button);
+    }
+
+    Object.values(inputs).forEach(input => input.addEventListener('input', draw));
+    document.querySelectorAll('[data-preset]').forEach(button => {
+      button.addEventListener('click', () => applyPreset(button.dataset.preset));
+    });
+    document.getElementById('reset').addEventListener('click', () => applyPreset('webb'));
+    document.getElementById('random').addEventListener('click', () => {
+      inputs.red.value = 20 + Math.floor(Math.random() * 80);
+      inputs.green.value = 20 + Math.floor(Math.random() * 80);
+      inputs.blue.value = 20 + Math.floor(Math.random() * 80);
+      inputs.gamma.value = (0.7 + Math.random() * 0.8).toFixed(2);
+      inputs.saturation.value = 80 + Math.floor(Math.random() * 100);
+      document.querySelectorAll('[data-preset]').forEach(button => button.classList.remove('active'));
+      draw();
+    });
+    document.getElementById('save').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `jwst-${current}-colorized.png`;
+      link.click();
+    });
+
+    chooseTarget(current);
+  </script>
+</body>
+</html>
